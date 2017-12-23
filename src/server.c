@@ -51,6 +51,11 @@ void server_tick(Server *server, Client **client_first) {
 
 		client->fd = accept(server->fd, (struct sockaddr *) &client->address, &client->address_length);
 
+		if(client->fd < 0)
+			error("accept");
+
+		client_init(client);
+
 		Client **client_node = client_first;
 
 		while(*client_node != NULL) {
