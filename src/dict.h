@@ -16,4 +16,8 @@ typedef struct {
 	size_t buckets;
 } Dict;
 
+void dict_init(Dict *, size_t);
+void dict_set(Dict *, char *, size_t, char *, size_t);
+int dict_get(Dict *, char *, size_t, char **, size_t *);
+
 #endif
