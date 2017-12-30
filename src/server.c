@@ -69,11 +69,12 @@ void server_tick(Server *server, Client **client_first) {
 		printf("checking %d\n", (*client_node)->fd);
 
 		if(FD_ISSET((*client_node)->fd, &rset)) {
+			printf("input\n");
 			if(!client_handle(*client_node)) {
+				printf("idsssdt\n");
 				printf("%d disconnected\n", (*client_node)->fd);
 				Client *client = *client_node;
 				*client_node = client->next;
-				free(client);
 
 				if(*client_node == NULL)
 					return;

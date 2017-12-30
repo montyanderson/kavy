@@ -2,12 +2,12 @@
 #define KAVY_CLIENT
 
 #include "main.h"
+#include "buffer.h"
 
 typedef struct Client_s {
 	int fd;
-	char *buffer;
-	size_t buffer_length;
-	size_t buffer_size;
+	Buffer input;
+	Buffer output;
 	struct sockaddr_in address;
 	socklen_t address_length;
 	struct Client_s *next;
