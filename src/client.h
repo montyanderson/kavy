@@ -3,6 +3,7 @@
 
 #include "main.h"
 #include "buffer.h"
+#include "dict.h"
 
 typedef struct Client_s {
 	int fd;
@@ -14,6 +15,6 @@ typedef struct Client_s {
 } Client;
 
 void client_init(Client *);
-int client_handle(Client *);
+int client_handle(Client *, Dict *, char *, size_t);
 
 #endif

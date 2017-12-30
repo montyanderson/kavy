@@ -8,7 +8,7 @@ size_t dict_hash(Dict *dict, char *data, size_t data_length) {
 	size_t h = 5381;
 
 	for(size_t i = 0; i < data_length; i++) {
-		h = h * 33 ^ data[i];
+		h = h * 33 ^ (unsigned char) data[i];
 	}
 
 	return h % dict->buckets;

@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <endian.h>
+#include <fcntl.h>
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
 

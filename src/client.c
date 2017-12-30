@@ -1,10 +1,8 @@
 #include "main.h"
 #include "client.h"
+#include "dict.h"
 
-const size_t recv_buffer_size = 1;
-char *recv_buffer;
-
-void _client_cmd_set(Client *client) {
+void _client_cmd_set(Client *client, Dict *dict) {
 	const size_t header_length = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t);
 
 	if(client->input.length < header_length)
@@ -31,14 +29,53 @@ void _client_cmd_set(Client *client) {
 
 	printf("key: %.*s (%u bytes)\nvalue: %.*s (%u bytes)\n", (int) key_length, key, key_length, (int) value_length, value, value_length);
 
-	buffer_ltrim(&client->input, header_length + value_length);
+	dict_set(dict, key, key_length, value, value_length);
+
+	buffer_ltrim(&client->input, header_length + data_length);
+
+	char result = 1;
+
+	buffer_append(&client->output, &result, 1);
 }
 
-void _client_cmd_get(Client *client) {
+void _client_cmd_get(Client *client, Dict *dict) {
+	const size_t header_length = sizeof(uint8_t) + sizeof(uint32_t);
 
+	if(client->input.length < header_length)
+		return;
+
+	printf("get handler\n");
+
+	uint32_t key_length;
+	buffer_slice(&client->input, sizeof(uint8_t), &key_length, sizeof(uint32_t));
+	key_length = be32toh(key_length);
+
+	char *key = client->input.data + header_length;
+
+	if(client->input.length < header_length + key_length)
+		return;
+
+	printf("key: %.*s (%u bytes)\n", (int) key_length, key, key_length);
+
+	char *value;
+	size_t value_length;
+
+	if(dict_get(dict, key, key_length, &value, &value_length)) {
+		char result = 2;
+		uint32_t value_length_reply = htobe32((uint32_t) value_length);
+
+		buffer_append(&client->output, &result, 1);
+		buffer_append(&client->output, (char *) &value_length_reply, sizeof(uint32_t));
+		buffer_append(&client->output, value, value_length);
+	} else {
+		char result = 0;
+		buffer_append(&client->output, &result, 1);
+	}
+
+	buffer_ltrim(&client->input, header_length + key_length);
 }
 
-void (*cmds[])(Client *client) = {
+void (*cmds[])(Client *, Dict *) = {
 	NULL,
 	&_client_cmd_set,
 	&_client_cmd_get
@@ -54,39 +91,24 @@ void client_free(Client *client) {
 	buffer_free(&client->output);
 }
 
-int client_handle(Client *client) {
-	// if recv_buffer hasn't been allocated yet
-	// todo: move to server startup
-	if(recv_buffer == NULL) {
-		recv_buffer = malloc(recv_buffer_size);
-
-		if(recv_buffer == NULL)
-			error("malloc");
-	}
-
+int client_handle(Client *client, Dict *dict, char *recv_buffer, size_t recv_buffer_size) {
 	ssize_t recv_buffer_length = recv(client->fd, recv_buffer, recv_buffer_size, 0);
 
-
-
 	// check if client still connected
-	if(recv_buffer_length < 0) {
+	if(recv_buffer_length <= 0) {
 		client_free(client);
 		return 0;
 	}
 
-	if(recv_buffer_length == 0)
-		return 1;
-
-	printf("a %d\n", client->input.data[0]);
 	// append recv_buffer to client input buffer
 	buffer_append(&client->input, recv_buffer, recv_buffer_length);
 	// run command handler
 
-	printf("a %d\n", client->input.data[0]);
-	cmds[(size_t) client->input.data[0]](client);
-	printf("b\n");
+	if(client->input.data[0] >= sizeof(cmds) / sizeof(cmds[0])) {
+		return 1;
+	}
 
-	printf("yo\n");
+	cmds[(size_t) client->input.data[0]](client, dict);
 
 	return 1; // client is still connected
 }

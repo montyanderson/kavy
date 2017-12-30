@@ -1,6 +1,7 @@
 #include "main.h"
 #include "client.h"
 #include "server.h"
+#include "dict.h"
 
 void server_init(Server *server) {
 	server->fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -26,20 +27,32 @@ void server_init(Server *server) {
 
 	if(listen(server->fd, SOMAXCONN) < 0)
 		error("listen");
+
+	server->recv_buffer = malloc(server->recv_buffer_size = 1024 * 1024);
+
+	if(server->recv_buffer == NULL)
+		error("malloc");
+
+	dict_init(&server->dict, 1024 * 1024);
 }
 
-void server_tick(Server *server, Client **client_first) {
-	fd_set rset;
+void server_tick(Server *server) {
+	fd_set rset, wset;
 
 	FD_SET(server->fd, &rset);
 	int maxfd = server->fd;
 
-	for(Client *client = *client_first; client != NULL; client = client->next) {
+	for(Client *client = server->client; client != NULL; client = client->next) {
 		FD_SET(client->fd, &rset);
+
+		if(client->output.length > 0) {
+			FD_SET(client->fd, &wset);
+		}
+
 		maxfd = max(maxfd, client->fd);
 	}
 
-	select(maxfd + 1, &rset, NULL, NULL, NULL);
+	select(maxfd + 1, &rset, &wset, NULL, NULL);
 
 	if(FD_ISSET(server->fd, &rset)) {
 		printf("accepting new socket\n");
@@ -51,12 +64,14 @@ void server_tick(Server *server, Client **client_first) {
 
 		client->fd = accept(server->fd, (struct sockaddr *) &client->address, &client->address_length);
 
+		fcntl(client->fd, F_SETFL, O_NONBLOCK);
+
 		if(client->fd < 0)
 			error("accept");
 
 		client_init(client);
 
-		Client **client_node = client_first;
+		Client **client_node = &server->client;
 
 		while(*client_node != NULL) {
 			client_node = &(*client_node)->next;
@@ -65,20 +80,20 @@ void server_tick(Server *server, Client **client_first) {
 		*client_node = client;
 	}
 
-	for(Client **client_node = client_first; *client_node != NULL; client_node = &(*client_node)->next) {
-		printf("checking %d\n", (*client_node)->fd);
-
+	for(Client **client_node = &server->client; *client_node != NULL; client_node = &(*client_node)->next) {
 		if(FD_ISSET((*client_node)->fd, &rset)) {
-			printf("input\n");
-			if(!client_handle(*client_node)) {
-				printf("idsssdt\n");
-				printf("%d disconnected\n", (*client_node)->fd);
+			if(!client_handle(*client_node, &server->dict, server->recv_buffer, server->recv_buffer_size)) {
 				Client *client = *client_node;
 				*client_node = client->next;
 
 				if(*client_node == NULL)
 					return;
 			}
+		}
+
+		if(FD_ISSET((*client_node)->fd, &wset)) {
+			ssize_t result = send((*client_node)->fd, (*client_node)->output.data, (*client_node)->output.length, 0);
+			buffer_ltrim(&(*client_node)->output, result);
 		}
 	}
 }

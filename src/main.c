@@ -9,11 +9,11 @@ void error(char *func) {
 
 int main(int argc, char **argv) {
 	Server server;
+
+	memset(&server, 0, sizeof(Server));
 	server_init(&server);
 
-	Client *client_first = NULL;
-
 	for(;;) {
-		server_tick(&server, &client_first);
+		server_tick(&server);
 	}
 }
