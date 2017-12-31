@@ -19,3 +19,29 @@ Kavy runs on an event-loop architecture, which works as follows
 ## What's the performance like?
 
 In my synthetic benchmarks, Kavy was up to *10 times faster* than Redis - likely due to it's pure simplicity and lack of logging and client-specific error handling.
+
+## Protocol
+
+All values are big-endian.
+
+### `set`
+
+#### Request
+`uint8 1` `uint32 key_length` `uint32 value_length` `char[] key` `char[] value`
+
+#### Response
+
+`uint8 0`
+or
+`uint8 1` for fail/success respectively
+
+### `get`
+
+#### Request
+`uint8 2` `uint32 key_length` `char key[]`
+
+#### Response
+
+`uint8 0`
+
+`uint8 2` `uint32 value_length` `char[] value`
