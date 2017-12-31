@@ -15,3 +15,7 @@ Kavy runs on an event-loop architecture, which works as follows
 * Binary protocol - speed is prioritised here, rather than compatibility
 * Static hash table with a fixed amount of buckets
 * Literally only two features - `set` and `get`
+
+## What's the performance like?
+
+In my synthetic benchmarks, Kavy was up to *10 times faster* than Redis - likely due to it's pure simplicity and lack of logging and client-specific error handling.
