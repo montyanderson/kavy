@@ -13,7 +13,7 @@ Kavy runs on an event-loop architecture, which works as follows
 ## What makes Kavy different from Redis?
 
 * Binary protocol - speed is prioritised here, rather than compatibility
-* Static hash table with a fixed amount of buckets
+* Static hash table with a fixed amount of buckets (1024^2 by default, which takes up only 8MB on a 64-bit system)
 * Literally only two features - `set` and `get`
 
 ## What's the performance like?
