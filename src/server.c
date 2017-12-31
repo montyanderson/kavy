@@ -55,7 +55,7 @@ void server_tick(Server *server) {
 	select(maxfd + 1, &rset, &wset, NULL, NULL);
 
 	if(FD_ISSET(server->fd, &rset)) {
-		printf("accepting new socket\n");
+		//printf("accepting new socket\n");
 
 		Client *client = calloc(1, sizeof(Client));
 
@@ -93,7 +93,9 @@ void server_tick(Server *server) {
 
 		if(FD_ISSET((*client_node)->fd, &wset)) {
 			ssize_t result = send((*client_node)->fd, (*client_node)->output.data, (*client_node)->output.length, 0);
-			buffer_ltrim(&(*client_node)->output, result);
+
+			if(result > 0)
+				buffer_ltrim(&(*client_node)->output, result);
 		}
 	}
 }

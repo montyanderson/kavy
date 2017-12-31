@@ -2,13 +2,11 @@
 #include "client.h"
 #include "dict.h"
 
-void _client_cmd_set(Client *client, Dict *dict) {
+int _client_cmd_set(Client *client, Dict *dict) {
 	const size_t header_length = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t);
 
 	if(client->input.length < header_length)
-		return;
-
-	printf("set handler\n");
+		return 0;
 
 	uint32_t key_length;
 	buffer_slice(&client->input, sizeof(uint8_t), &key_length, sizeof(uint32_t));
@@ -25,9 +23,7 @@ void _client_cmd_set(Client *client, Dict *dict) {
 	const size_t data_length = key_length + value_length;
 
 	if(client->input.length < header_length + data_length)
-		return;
-
-	printf("key: %.*s (%u bytes)\nvalue: %.*s (%u bytes)\n", (int) key_length, key, key_length, (int) value_length, value, value_length);
+		return 0;
 
 	dict_set(dict, key, key_length, value, value_length);
 
@@ -36,15 +32,15 @@ void _client_cmd_set(Client *client, Dict *dict) {
 	char result = 1;
 
 	buffer_append(&client->output, &result, 1);
+
+	return 1;
 }
 
-void _client_cmd_get(Client *client, Dict *dict) {
+int _client_cmd_get(Client *client, Dict *dict) {
 	const size_t header_length = sizeof(uint8_t) + sizeof(uint32_t);
 
 	if(client->input.length < header_length)
-		return;
-
-	printf("get handler\n");
+		return 0;
 
 	uint32_t key_length;
 	buffer_slice(&client->input, sizeof(uint8_t), &key_length, sizeof(uint32_t));
@@ -53,9 +49,7 @@ void _client_cmd_get(Client *client, Dict *dict) {
 	char *key = client->input.data + header_length;
 
 	if(client->input.length < header_length + key_length)
-		return;
-
-	printf("key: %.*s (%u bytes)\n", (int) key_length, key, key_length);
+		return 0;
 
 	char *value;
 	size_t value_length;
@@ -73,9 +67,11 @@ void _client_cmd_get(Client *client, Dict *dict) {
 	}
 
 	buffer_ltrim(&client->input, header_length + key_length);
+
+	return 1;
 }
 
-void (*cmds[])(Client *, Dict *) = {
+int (*cmds[])(Client *, Dict *) = {
 	NULL,
 	&_client_cmd_set,
 	&_client_cmd_get
@@ -108,7 +104,9 @@ int client_handle(Client *client, Dict *dict, char *recv_buffer, size_t recv_buf
 		return 1;
 	}
 
-	cmds[(size_t) client->input.data[0]](client, dict);
+	while(cmds[(size_t) client->input.data[0]](client, dict) && client->input.length > 0) {
+		;
+	}
 
 	return 1; // client is still connected
 }

@@ -22,10 +22,25 @@ void buffer_ltrim(Buffer *buffer, size_t n) {
 
 	buffer->length -= n;
 	memmove(buffer->data, buffer->data + n, buffer->length);
+
+	size_t container = buffer->container;
+
+	while(container >= buffer->length) {
+		container /= 2;
+	}
+
+	container *= 2;
+
+	if(buffer->container > container) {
+		buffer->data = realloc(buffer->data, buffer->container = container);
+
+		if(buffer->data == NULL)
+			error("realloc");
+	}
 }
 
 void buffer_append(Buffer *buffer, char *data, size_t data_length) {
-		printf("%lu\n", buffer->length);
+	//printf("%lu\n", buffer->length);
 
 	const size_t index = buffer->length;
 	buffer->length += data_length;
