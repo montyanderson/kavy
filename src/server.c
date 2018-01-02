@@ -42,6 +42,7 @@ void server_tick(Server *server) {
 	FD_SET(server->fd, &rset);
 	int maxfd = server->fd;
 
+	// build fd sets
 	for(Client *client = server->client; client != NULL; client = client->next) {
 		FD_SET(client->fd, &rset);
 
@@ -52,11 +53,11 @@ void server_tick(Server *server) {
 		maxfd = max(maxfd, client->fd);
 	}
 
+	// wait for any descriptors to be readable or writable
 	select(maxfd + 1, &rset, &wset, NULL, NULL);
 
+	// check if their is a new client
 	if(FD_ISSET(server->fd, &rset)) {
-		//printf("accepting new socket\n");
-
 		Client *client = calloc(1, sizeof(Client));
 
 		if(client == NULL)
@@ -73,6 +74,7 @@ void server_tick(Server *server) {
 
 		Client **client_node = &server->client;
 
+		// cycle up linked list until there's a space
 		while(*client_node != NULL) {
 			client_node = &(*client_node)->next;
 		}
@@ -80,17 +82,26 @@ void server_tick(Server *server) {
 		*client_node = client;
 	}
 
+	// for each client in the linked list
 	for(Client **client_node = &server->client; *client_node != NULL; client_node = &(*client_node)->next) {
+		// if client is readable
 		if(FD_ISSET((*client_node)->fd, &rset)) {
+			// run the client handler, and check if the client is still connected
 			if(!client_handle(*client_node, &server->dict, server->recv_buffer, server->recv_buffer_size)) {
+				// replace the current client with the next one
 				Client *client = *client_node;
 				*client_node = client->next;
 
+				client_free(client);
+				free(client);
+
+				// if we're now on the last client, end the loop as (NULL)->next will fail
 				if(*client_node == NULL)
 					return;
 			}
 		}
 
+		// if client is writable
 		if(FD_ISSET((*client_node)->fd, &wset)) {
 			ssize_t result = send((*client_node)->fd, (*client_node)->output.data, (*client_node)->output.length, 0);
 

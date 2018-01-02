@@ -16,5 +16,6 @@ typedef struct Client_s {
 
 void client_init(Client *);
 int client_handle(Client *, Dict *, char *, size_t);
+void client_free(Client *);
 
 #endif

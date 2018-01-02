@@ -91,10 +91,8 @@ int client_handle(Client *client, Dict *dict, char *recv_buffer, size_t recv_buf
 	ssize_t recv_buffer_length = recv(client->fd, recv_buffer, recv_buffer_size, 0);
 
 	// check if client still connected
-	if(recv_buffer_length <= 0) {
-		client_free(client);
+	if(recv_buffer_length <= 0)
 		return 0;
-	}
 
 	// append recv_buffer to client input buffer
 	buffer_append(&client->input, recv_buffer, recv_buffer_length);
